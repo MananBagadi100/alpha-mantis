@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Pull Docker Image') {
+            steps {
+                sh 'docker pull memcached'
+            }
+        }
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                docker run -d --name memcached_container memcached
+                docker logs memcached_container > build_log.txt
+                '''
+            }
+        }
+        stage('Verify API') {
+            steps {
+                sh '''
+                curl -X GET http://localhost:11211 > api_status_log.txt
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            sh 'docker stop memcached_container && docker rm memcached_container'
+            sh 'docker system prune -f'
+        }
+    }
+}
